@@ -1,28 +1,41 @@
-import{create}from "zustand"
-import axios from "axios"
-import {CryptoCurrenciesResponseSchema } from "./schema/crypto-schema"
-import { Cryptocurrency } from "./types"
-
+import { create } from 'zustand'
+import { devtools } from 'zustand/middleware'
+import { CryptoPrice, Cryptocurrency, Pair } from './types'
+import { getCryptos, fetchCurrentCryptoPrice } from './services/CryptoService'
 
 type CryptoStore = {
     cryptocurrencies: Cryptocurrency[]
+    result: CryptoPrice
+    loading: boolean
     fetchCryptos: () => Promise<void>
+    fetchData: (pair: Pair) => Promise<void>
 }
 
-async function getCryptos() {
-    const url = "https://min-api.cryptocompare.com/data/top/mktcapfull?limit=20&ysym=USD"
-    const {data: {Data}} = await axios(url)
-    const result = CryptoCurrenciesResponseSchema.safeParse(Data)
-    if(result.success){
-        return result.data
-    }
-}
-
-export const useCryptoStore = create<CryptoStore>((set) => ({
+export const useCryptoStore = create<CryptoStore>()(devtools((set) => ({
     cryptocurrencies: [],
-    fetchCryptos: async() => {
+    result: {
+        IMAGEURL : '',
+        PRICE: '',
+        HIGHDAY: '',
+        LOWDAY: '',
+        CHANGEPCT24HOUR: '',
+        LASTUPDATE: ''
+    },
+    loading: false,
+    fetchCryptos: async () => {
         const cryptocurrencies = await getCryptos()
-    set(() => ({}))
-    cryptocurrencies
+        set(() => ({
+            cryptocurrencies
+        }))
+    },
+    fetchData: async (pair) => {
+        set(() => ({
+            loading: true
+        }))
+        const result = await fetchCurrentCryptoPrice(pair)
+        set(() => ({
+            result,
+            loading: false
+        }))
     }
-})) 
+})))
